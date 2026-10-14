@@ -24,6 +24,8 @@ export default function APIPageClient({ machineId }) {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [keyError, setKeyError] = useState("");
   const [createdKey, setCreatedKey] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
 
@@ -615,14 +617,24 @@ export default function APIPageClient({ machineId }) {
     }
   };
 
-  const handleCreateKey = async () => {
-    if (!newKeyName.trim()) return;
+  const closeAddKeyModal = () => {
+    if (creatingKey) return;
+    setShowAddModal(false);
+    setNewKeyName("");
+    setKeyError("");
+  };
+
+  const handleCreateKey = async (event) => {
+    event.preventDefault();
+    if (!newKeyName.trim() || creatingKey) return;
+    setCreatingKey(true);
+    setKeyError("");
 
     try {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newKeyName }),
+        body: JSON.stringify({ name: newKeyName.trim() }),
       });
       const data = await res.json();
 
@@ -631,9 +643,13 @@ export default function APIPageClient({ machineId }) {
         await fetchData();
         setNewKeyName("");
         setShowAddModal(false);
+      } else {
+        setKeyError(data.error || "Failed to create API key. Please try again.");
       }
-    } catch (error) {
-      console.log("Error creating key:", error);
+    } catch {
+      setKeyError("Could not create API key. Check your connection and try again.");
+    } finally {
+      setCreatingKey(false);
     }
   };
 
@@ -1106,34 +1122,34 @@ export default function APIPageClient({ machineId }) {
       <Modal
         isOpen={showAddModal}
         title="Create API Key"
-        onClose={() => {
-          setShowAddModal(false);
-          setNewKeyName("");
-        }}
+        onClose={closeAddKeyModal}
       >
-        <div className="flex flex-col gap-4">
+        <form onSubmit={handleCreateKey} className="flex flex-col gap-4">
           <Input
             label="Key Name"
             value={newKeyName}
-            onChange={(e) => setNewKeyName(e.target.value)}
+            onChange={(e) => { setNewKeyName(e.target.value); setKeyError(""); }}
             placeholder="Production Key"
+            error={keyError}
+            disabled={creatingKey}
+            required
+            autoFocus
           />
           <div className="flex gap-2">
-            <Button onClick={handleCreateKey} fullWidth disabled={!newKeyName.trim()}>
-              Create
+            <Button type="submit" fullWidth loading={creatingKey} disabled={!newKeyName.trim()}>
+              {creatingKey ? "Creating…" : "Create"}
             </Button>
             <Button
-              onClick={() => {
-                setShowAddModal(false);
-                setNewKeyName("");
-              }}
+              type="button"
+              onClick={closeAddKeyModal}
+              disabled={creatingKey}
               variant="ghost"
               fullWidth
             >
               Cancel
             </Button>
           </div>
-        </div>
+        </form>
       </Modal>
 
       {/* Created Key Modal */}
