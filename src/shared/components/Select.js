@@ -1,9 +1,13 @@
 "use client";
 
+import { useId } from "react";
 import { cn } from "@/shared/utils/cn";
 
 export default function Select({
   label,
+  id,
+  "aria-describedby": describedBy,
+  "aria-invalid": ariaInvalid,
   options = [],
   value,
   onChange,
@@ -16,16 +20,25 @@ export default function Select({
   selectClassName,
   ...props
 }) {
+  const generatedId = useId();
+  const controlId = id ?? generatedId;
+  const messageId = `${controlId}-message`;
+  const description = [describedBy, (error || hint) && messageId].filter(Boolean).join(" ") || undefined;
+
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && (
-        <label className="text-sm font-medium text-text-main">
+        <label htmlFor={controlId} className="text-sm font-medium text-text-main">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
       <div className="relative">
         <select
+          id={controlId}
+          required={required}
+          aria-invalid={error ? true : ariaInvalid}
+          aria-describedby={description}
           value={value}
           onChange={onChange}
           disabled={disabled}
@@ -54,13 +67,13 @@ export default function Select({
         </div>
       </div>
       {error && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
-          <span className="material-symbols-outlined text-[14px]">error</span>
+        <p id={messageId} role="alert" className="text-xs text-red-500 flex items-center gap-1">
+          <span aria-hidden="true" className="material-symbols-outlined text-[14px]">error</span>
           {error}
         </p>
       )}
       {hint && !error && (
-        <p className="text-xs text-text-muted">{hint}</p>
+        <p id={messageId} className="text-xs text-text-muted">{hint}</p>
       )}
     </div>
   );
